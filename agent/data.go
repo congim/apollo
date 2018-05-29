@@ -17,6 +17,7 @@ type Data interface {
 	Decoder() error
 	Reader() (interface{}, error)
 	Writer(interface{}) error
+	GetCollectors() []string
 	GetReporters() []string
 }
 

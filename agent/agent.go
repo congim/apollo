@@ -1,8 +1,9 @@
 package agent
 
 import (
+	"fmt"
 	"log"
-	"sync"
+	"time"
 
 	"github.com/naoina/toml"
 	"github.com/naoina/toml/ast"
@@ -11,11 +12,10 @@ import (
 
 // Agent agent for collect system msgs
 type Agent struct {
-	// Collectors []Collector
-	// Reporters  []Reporter
 	Collectors map[string]Collector
 	Reporters  map[string]Reporter
 	Datas      map[string]Data
+	Routers    map[string]*Router
 }
 
 var gAgent *Agent
@@ -23,11 +23,10 @@ var gAgent *Agent
 // CreateAgent create new agent
 func CreateAgent() (*Agent, error) {
 	agent := &Agent{
-		// Collectors: make([]Collector, 0),
-		// Reporters:  make([]Reporter, 0),
 		Collectors: make(map[string]Collector),
 		Reporters:  make(map[string]Reporter),
 		Datas:      make(map[string]Data),
+		Routers:    make(map[string]*Router),
 	}
 	gAgent = agent
 	return agent, nil
@@ -35,33 +34,35 @@ func CreateAgent() (*Agent, error) {
 
 // Run run agent server
 func (agent *Agent) Run() error {
-	// Logger.Info("Run", zap.Int("len", int(len(agent.Collectors))))
-	// for _, collector := range agent.Collectors {
-	// 	collector.Description()
-	// }
-	//
 
-	log.Println("Run")
-	agent.runCollectors()
-	agent.runData()
-	log.Println("Run 2", agent.Datas)
-	return nil
-}
-
-func (agent *Agent) runCollectors() error {
-	// Logger.Info("Run", zap.Int("len", int(len(agent.Collectors))))
-	// for _, collector := range agent.Collectors {
-	// 	collector.Description()
-	// }
-	//
-	return nil
-}
-
-func (agent *Agent) runData() error {
-	for _, data := range agent.Datas {
-		// data.Reader()
-		log.Println("get reporters", data.GetReporters())
+	// init Data
+	if err := agent.initData(); err != nil {
+		Logger.Fatal("Run", zap.Error(err))
+		return err
 	}
+
+	// init collector
+	if err := agent.initCollector(); err != nil {
+		Logger.Fatal("Run", zap.Error(err))
+		return err
+	}
+
+	// init reporter
+	if err := agent.initReporter(); err != nil {
+		Logger.Fatal("Run", zap.Error(err))
+		return err
+	}
+
+	// init router
+	if err := agent.initRouter(); err != nil {
+		Logger.Fatal("Run", zap.Error(err))
+		return err
+	}
+
+	// start consume
+	agent.Consume()
+
+	Logger.Info("Agent Run")
 	return nil
 }
 
@@ -89,9 +90,9 @@ func (agent *Agent) AddCollector(name string, iTbl *ast.Table) {
 	}
 
 	Logger.Info("Add", zap.String("collector", name))
+
 	// 添加到Agent Collectors
 	agent.Collectors[name] = collector
-	// agent.Collectors = append(agent.Collectors, collector)
 }
 
 // AddData ...
@@ -110,7 +111,6 @@ func (agent *Agent) AddData(name string, iTbl *ast.Table) {
 
 	// 添加到Agent Datas
 	agent.Datas[name] = data
-	// agent.Datas = append(agent.Datas, data)
 }
 
 // AddReporter ...
@@ -134,38 +134,110 @@ func (agent *Agent) AddReporter(name string, iTbl *ast.Table) {
 	Logger.Info("Add", zap.String("reporter", name))
 	// 添加到Agent Reporters
 	agent.Reporters[name] = reporter
-	// agent.Reporters = append(agent.Reporters, reporter)
 }
 
-func (agent *Agent) flush() {
-	// log.Println("flush")
-	// for _, reporter := range agent.Reporters {
-	// 	reporter.Write("")
-	// }
+/************************************************************************************************/
+/*									Agent	Init												*/
+/************************************************************************************************/
+
+// initData  init data
+func (agent *Agent) initData() error {
+	for name, data := range agent.Datas {
+		if err := data.Init(); err != nil {
+			Logger.Fatal("initData", zap.Error(err), zap.String("data name", name))
+		}
+
+		// add data into Collector
+		for _, cname := range data.GetCollectors() {
+			if err := agent.collectorAddData(cname, data); err != nil {
+				Logger.Warn("collectorAddData", zap.Error(err), zap.String("data name", name))
+				continue
+			}
+		}
+
+		Logger.Info("initData", zap.String("name", name))
+	}
+	return nil
 }
 
-// flusher monitors the metrics input channel and flushes on the minimum interval
-func (agent *Agent) flusher(wg *sync.WaitGroup, shutdown chan struct{}, metricC chan []byte) {
-	// defer func() {
-	// 	wg.Done()
-	// 	if err := recover(); err != nil {
-	// 		Logger.Fatal("flush fatal error ", zap.Error(err.(error)))
-	// 	}
-	// }()
+func (agent *Agent) initReporter() error {
+	for name, reporter := range agent.Reporters {
+		log.Println(name, reporter)
+		if err := reporter.Start(); err != nil {
+			Logger.Error("initReporter", zap.String("name", name), zap.Error(err))
+		}
+	}
+	return nil
+}
 
-	// ticker := time.NewTicker(time.Duration(Conf.AgentC.FlushInterval) * time.Second)
-	// for {
-	// 	select {
-	// 	case <-shutdown:
-	// 		agent.flush()
-	// 		return
-	// 	case <-ticker.C:
-	// 		agent.flush()
-	// 	case m := <-metricC:
-	// 		log.Println(m)
-	// 		// for _, o := range Conf.Outputs {
-	// 		// 	o.AddMetric(m)
-	// 		// }
-	// 	}
-	// }
+func (agent *Agent) collectorAddData(cname string, data Data) error {
+	collector, ok := agent.Collectors[cname]
+	if !ok {
+		return fmt.Errorf("unfind collector, collector name is %s", cname)
+	}
+	collector.AddData(data)
+	return nil
+}
+
+// initCollector init collector
+func (agent *Agent) initCollector() error {
+	for name, collector := range agent.Collectors {
+		if err := collector.Init(); err != nil {
+			Logger.Fatal("initCollector", zap.Error(err), zap.String("name", name))
+		}
+		Logger.Info("initCollector", zap.String("name", name))
+	}
+	return nil
+}
+
+// initRouter ...
+func (agent *Agent) initRouter() error {
+	for _, data := range agent.Datas {
+		router, ok := agent.Routers[data.Description()]
+		if !ok {
+			router = NewRouter(data.Description(), data)
+			agent.Routers[data.Description()] = router
+		}
+		for _, reporterName := range data.GetReporters() {
+			// get reporter
+			report, ok := agent.Reporters[reporterName]
+			if ok {
+				Logger.Info("initRouter", zap.String("add reporter", reporterName))
+				router.AddReporter(reporterName, report)
+			} else {
+				Logger.Warn("initRouter", zap.String("unfind reporter", reporterName))
+			}
+		}
+	}
+	return nil
+}
+
+/************************************************************************************************/
+/*									Agent	Run													*/
+/************************************************************************************************/
+
+// Consume ....
+func (agent *Agent) Consume() {
+	for name, router := range agent.Routers {
+		go agent.consume(router.data)
+		Logger.Info("Consume", zap.String("router", name))
+	}
+}
+
+func (agent *Agent) consume(data Data) {
+	for {
+		mdata, err := data.Reader()
+		if err != nil {
+			Logger.Warn("consume", zap.String("data name", data.Description()), zap.Error(err))
+			time.Sleep(1 * time.Second)
+		}
+
+		for _, name := range data.GetReporters() {
+			reporter, ok := agent.Reporters[name]
+			if !ok {
+				continue
+			}
+			reporter.Write(mdata)
+		}
+	}
 }

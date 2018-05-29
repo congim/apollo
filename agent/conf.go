@@ -82,7 +82,7 @@ func LoadConfig(file string) {
 	// parse reporter config
 	parseReporter(tbl)
 
-	log.Println("agent conf : ", Conf.AgentC)
+	// log.Println("agent conf : ", Conf.AgentC)
 
 }
 

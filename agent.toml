@@ -27,7 +27,7 @@
 [[collectors.cpu]]
     percpu = false
     totalcpu = true
-    interval = "10s"
+    interval = 5
 
 [[collectors.disk]]
     mount_points = ["/"]
@@ -44,8 +44,6 @@
 #                                   REPORTERS                                 #
 ###############################################################################
 
-[[reporters.tcp]]
-
 [[reporters.influxdb]]
 
 
@@ -54,8 +52,10 @@
 ###############################################################################
 
 [datas.metric]
-    collectors = ["mycollector"]
+    collectors = ["cpu"]
     reporters = ["udp", "influxdb"]
+    chan_size = 100
+    name = "metric"
 
 
 [datas.log]

@@ -4,12 +4,12 @@ import (
 	"log"
 
 	"github.com/shaocongcong/apollo/agent"
-	"github.com/shaocongcong/apollo/plugins/data/system"
 )
 
 type MyCollector struct {
 	Addr  string
 	Descr []string
+	data  agent.Data
 	// Reporters []string
 }
 
@@ -21,9 +21,11 @@ func (mc *MyCollector) Description() string {
 }
 
 func (mc *MyCollector) AddData(c agent.Data) error {
-	metric := &system.Metric{}
-	// c.AddChan(metric)
-	log.Println(metric)
+	mc.data = c
+	// metric := &system.Metric{}
+	// // c.AddChan(metric)
+	// log.Println(metric)
+
 	return nil
 }
 
@@ -31,7 +33,7 @@ func (mc *MyCollector) Gather() error {
 	return nil
 }
 
-func (mc *MyCollector) Run() error {
+func (mc *MyCollector) Init() error {
 	return nil
 }
 func (mc *MyCollector) Stop() error {

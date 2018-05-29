@@ -8,7 +8,14 @@ var reportLock sync.RWMutex
 
 // Reporter ...
 type Reporter interface {
+	// Start start reporter server
+	Start() error
+	// Stop any connections to the Output
+	Stop() error
+	// Write  put data
 	Write(interface{}) error
+	// Description returns a one-sentence description on the Output
+	Description() string
 }
 
 // AddReporter ....
