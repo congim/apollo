@@ -1,30 +1,21 @@
 package agent
 
-import (
-	"sync"
-)
+import "sync"
 
 // Datas ...
 var Datas map[string]Data
-var dataLock sync.RWMutex
+var dlock sync.RWMutex
 
 // Data ...
 type Data interface {
-	Init() error
-	Close() error
-	Description() string
 	Encoder() error
 	Decoder() error
-	Reader() (interface{}, error)
-	Writer(interface{}) error
-	GetCollectors() []string
-	GetReporters() []string
 }
 
 // AddData ....
 func AddData(name string, data Data) {
-	dataLock.Lock()
-	defer dataLock.Unlock()
+	dlock.Lock()
+	defer dlock.Unlock()
 
 	if Datas == nil {
 		Datas = make(map[string]Data)

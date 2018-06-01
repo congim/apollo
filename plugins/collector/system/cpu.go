@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/shaocongcong/apollo/agent"
-	"github.com/shaocongcong/apollo/common"
 	"github.com/shaocongcong/apollo/plugins/data/system"
 	"github.com/shirou/gopsutil/cpu"
 	"go.uber.org/zap"
@@ -16,10 +15,11 @@ type CPUStats struct {
 	ps        PS
 	lastStats []cpu.TimesStat
 	stop      chan bool
-	data      agent.Data
-	PerCPU    bool `toml:"percpu"`
-	TotalCPU  bool `toml:"totalcpu"`
-	Interval  int  `toml:"interval"`
+	PerCPU    bool   `toml:"percpu"`
+	TotalCPU  bool   `toml:"totalcpu"`
+	Interval  int    `toml:"interval"`
+	TransName string `toml:"trans_name"`
+	appname   string
 }
 
 // NewCPUStats ...
@@ -41,6 +41,7 @@ func (cpu *CPUStats) Gather() error {
 		tags := map[string]string{
 			"cpu": cts.CPU,
 		}
+
 		total := totalCpuTime(cts)
 		fields := map[string]interface{}{}
 		// Add in percentage
@@ -52,7 +53,10 @@ func (cpu *CPUStats) Gather() error {
 				Time:     now.Unix(),
 				Interval: cpu.Interval,
 			}
-			cpu.data.Writer([]*system.Metric{metric})
+			metric.Tags["app"] = cpu.appname
+			// log.Println(metric)
+			agent.Writer(cpu.TransName, []*system.Metric{metric})
+			// cpu.data.Writer([]*system.Metric{metric})
 			continue
 		}
 		lastCts := cpu.lastStats[i]
@@ -78,7 +82,16 @@ func (cpu *CPUStats) Gather() error {
 			Time:     now.Unix(),
 			Interval: cpu.Interval,
 		}
-		cpu.data.Writer([]*system.Metric{metric})
+
+		metric.Tags["app"] = cpu.appname
+
+		// log.Println("采集2 tags", metric.Tags)
+		// log.Println("采集2 fields", metric.Fields)
+		// cpu.data.Writer([]*system.Metric{metric})
+
+		agent.Writer(cpu.TransName, []*system.Metric{metric})
+
+		// log.Println(metric)
 	}
 
 	cpu.lastStats = times
@@ -86,17 +99,11 @@ func (cpu *CPUStats) Gather() error {
 	return nil
 }
 
-// Init ...
-func (cpu *CPUStats) Init() error {
-	go cpu.start()
-	return nil
-}
-
 func (cpu *CPUStats) start() error {
+	cpu.appname = agent.Name()
 	ticker := time.NewTicker(time.Duration(cpu.Interval) * time.Second)
 	defer func() {
 		if err := recover(); err != nil {
-			common.PrintStack(true)
 			agent.Logger.Error("cpu init", zap.Any("err", err))
 		}
 	}()
@@ -113,21 +120,19 @@ func (cpu *CPUStats) start() error {
 	}
 }
 
-// Stop ...
-func (cpu *CPUStats) Stop() error {
+// Init ...
+func (cpu *CPUStats) Init() error {
+	go cpu.start()
+	return nil
+}
+
+func (cpu *CPUStats) Start() error {
+	return nil
+}
+
+func (cpu *CPUStats) Close() error {
 	cpu.stop <- true
 	return nil
-}
-
-// AddData ...
-func (cpu *CPUStats) AddData(data agent.Data) error {
-	cpu.data = data
-	return nil
-}
-
-// Description ...
-func (cpu *CPUStats) Description() string {
-	return "Read metrics about cpu usage"
 }
 
 func totalCpuTime(t cpu.TimesStat) float64 {

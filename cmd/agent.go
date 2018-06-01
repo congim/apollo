@@ -15,7 +15,6 @@
 package cmd
 
 import (
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -56,21 +55,16 @@ func init() {
 
 func startAgent(cmd *cobra.Command, args []string) {
 
-	// new agent
-	agentSer, err := agent.CreateAgent()
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	// init conf
-	agent.LoadConfig("agent.toml")
+	agent.LoadConfig("apollo.toml")
 
 	// start agent
-	go agentSer.Run()
+	go agent.Start()
 
 	chSig := make(chan os.Signal)
 	signal.Notify(chSig, syscall.SIGINT, syscall.SIGTERM)
 	<-chSig
+
 	// stop agent
-	agentSer.Stop()
+	agent.Stop()
 }

@@ -36,7 +36,6 @@ func LogInit(lp string, lv string, isDebug bool) {
 		panic(err)
 	}
 	cfg.EncoderConfig = zap.NewProductionEncoderConfig()
-	//cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoderScc
 	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	var err error
 	Logger, err = cfg.Build()

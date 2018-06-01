@@ -4,24 +4,20 @@ import "sync"
 
 // Reporters ...
 var Reporters map[string]Reporter
-var reportLock sync.RWMutex
+var rlock sync.RWMutex
 
 // Reporter ...
 type Reporter interface {
-	// Start start reporter server
+	Init() error
 	Start() error
-	// Stop any connections to the Output
-	Stop() error
-	// Write  put data
-	Write(interface{}) error
-	// Description returns a one-sentence description on the Output
-	Description() string
+	Close() error
+	Writer(interface{}) error
 }
 
 // AddReporter ....
 func AddReporter(name string, reporter Reporter) {
-	reportLock.Lock()
-	defer reportLock.Unlock()
+	rlock.Lock()
+	defer rlock.Unlock()
 
 	if Reporters == nil {
 		Reporters = make(map[string]Reporter)

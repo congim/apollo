@@ -17,15 +17,28 @@ type CommonConfig struct {
 	Hostname string
 }
 
+type EtcdConf struct {
+	Addrs     []string
+	Dltimeout int
+	Rqtimeout int
+	WatchDir  string
+	TTL       int64
+}
+
 // AgentConf ...
 type AgentConf struct {
-	Interval        int // Interval at which to gather information
-	FlushInterval   int // FlushInterval is the Interval at which to flush data
-	MetricBatchSize int
+	Name   string
+	UseEnv bool
+	Env    string
+	Size   int
+	// Interval        int // Interval at which to gather information
+	// FlushInterval   int // FlushInterval is the Interval at which to flush data
+
 }
 
 // DataConf ...
 type DataConf struct {
+	ChanSize   int
 	Collectors []string
 	Reporters  []string
 }
@@ -34,7 +47,8 @@ type DataConf struct {
 type Config struct {
 	Common           *CommonConfig
 	AgentC           *AgentConf
-	DataC            *DataConf
+	EtcdC            *EtcdConf
+	DataC            map[string]*DataConf
 	CollectorFilters map[string]struct{}
 	ReporterFilters  map[string]struct{}
 }
@@ -46,7 +60,8 @@ func LoadConfig(file string) {
 	Conf = &Config{
 		Common:           &CommonConfig{},
 		AgentC:           &AgentConf{},
-		DataC:            &DataConf{},
+		EtcdC:            &EtcdConf{},
+		DataC:            make(map[string]*DataConf),
 		CollectorFilters: make(map[string]struct{}),
 		ReporterFilters:  make(map[string]struct{}),
 	}
@@ -69,6 +84,9 @@ func LoadConfig(file string) {
 
 	// parse agent config
 	parseAgent(tbl)
+
+	// // parse etcd config
+	// parseEtcd(tbl)
 
 	// parse datas config
 	parseDatas(tbl)
@@ -133,6 +151,19 @@ func parseAgent(tbl *ast.Table) {
 	}
 }
 
+// func parseEtcd(tbl *ast.Table) {
+// 	if val, ok := tbl.Fields["etcd"]; ok {
+// 		subTbl, ok := val.(*ast.Table)
+// 		if !ok {
+// 			log.Fatalln("[FATAL] : ", subTbl)
+// 		}
+// 		err := toml.UnmarshalTable(subTbl, Conf.EtcdC)
+// 		if err != nil {
+// 			log.Fatalln("[FATAL] parseEtcd: ", err, subTbl)
+// 		}
+// 	}
+// }
+
 func parseCommon(tbl *ast.Table) {
 	if val, ok := tbl.Fields["common"]; ok {
 		subTbl, ok := val.(*ast.Table)
@@ -146,8 +177,26 @@ func parseCommon(tbl *ast.Table) {
 	}
 }
 
-func parseDatas(tbl *ast.Table) {
+// func parseDatas(tbl *ast.Table) {
 
+// 	if val, ok := tbl.Fields["datas"]; ok {
+// 		subTbl, _ := val.(*ast.Table)
+// 		for pn, pt := range subTbl.Fields {
+// 			switch iTbl := pt.(type) {
+// 			case *ast.Table:
+// 				gAgent.AddData(pn, iTbl)
+// 			case []*ast.Table:
+// 				for _, t := range iTbl {
+// 					gAgent.AddData(pn, t)
+// 				}
+// 			default:
+// 				log.Fatalln("[FATAL] inputs parse error: ", iTbl)
+// 			}
+// 		}
+// 	}
+// }
+
+func parseDatas(tbl *ast.Table) {
 	if val, ok := tbl.Fields["datas"]; ok {
 		subTbl, _ := val.(*ast.Table)
 		for pn, pt := range subTbl.Fields {
@@ -184,7 +233,6 @@ func parseCollector(tbl *ast.Table) {
 }
 
 func parseReporter(tbl *ast.Table) {
-
 	if val, ok := tbl.Fields["reporters"]; ok {
 		subTbl, _ := val.(*ast.Table)
 		for pn, pt := range subTbl.Fields {
