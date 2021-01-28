@@ -7,7 +7,6 @@ import (
 
 	"github.com/naoina/toml"
 	"github.com/naoina/toml/ast"
-	"github.com/shaocongcong/xxxx/common"
 	"go.uber.org/zap"
 )
 
@@ -149,11 +148,11 @@ func (agent *Agent) setAgentName() error {
 	if !Conf.AgentC.UseEnv {
 		if agent.Name == "" {
 			// 获取主机名
-			host, err := common.GetHostName()
-			if err != nil {
-				Logger.Fatal("setAgentName", zap.Error(err))
-			}
-			agent.Name = host
+			//host, err := common.GetHostName()
+			//if err != nil {
+			//	Logger.Fatal("setAgentName", zap.Error(err))
+			//}
+			//agent.Name = host
 		}
 	} else {
 		// 使用环境变量

@@ -1,7 +1,7 @@
 package system
 
 import (
-	"github.com/shaocongcong/apollo/agent"
+	"github.com/congim/apollo/agent"
 )
 
 // Metric ...

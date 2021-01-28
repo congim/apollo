@@ -19,10 +19,10 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/shaocongcong/apollo/agent"
-	_ "github.com/shaocongcong/apollo/plugins/collector/all"
-	_ "github.com/shaocongcong/apollo/plugins/data/all"
-	_ "github.com/shaocongcong/apollo/plugins/reporter/all"
+	"github.com/congim/apollo/agent"
+	_ "github.com/congim/apollo/plugins/collector/all"
+	_ "github.com/congim/apollo/plugins/data/all"
+	_ "github.com/congim/apollo/plugins/reporter/all"
 	"github.com/spf13/cobra"
 )
 

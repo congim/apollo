@@ -1,5 +1,5 @@
 package all
 
 import (
-	_ "github.com/shaocongcong/apollo/plugins/data/system"
+	_ "github.com/congim/apollo/plugins/data/system"
 )

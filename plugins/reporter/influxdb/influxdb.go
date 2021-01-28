@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/influxdata/influxdb/client/v2"
-	"github.com/shaocongcong/apollo/agent"
-	"github.com/shaocongcong/apollo/plugins/data/system"
+	"github.com/congim/apollo/agent"
+	"github.com/congim/apollo/plugins/data/system"
 )
 
 // InfluxDB influxdb server

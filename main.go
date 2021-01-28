@@ -14,7 +14,7 @@
 
 package main
 
-import "github.com/shaocongcong/apollo/cmd"
+import "github.com/congim/apollo/cmd"
 
 func main() {
 	cmd.Execute()
